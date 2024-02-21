@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  distributor:
+    image: distributor-image
+    ports:
+      - "8080:8080"
+    environment:
+      - ANALYZER_ADDRESSES=analyzer1:9090,analyzer2:9090,analyzer3:9090
+      - ANALYZER_WEIGHTS=.4,.3,.3
+
+  analyzer1:
+    image: analyzer-image
+
+  analyzer2:
+    image: analyzer-image
+
+  analyzer3:
+    image: analyzer-image
