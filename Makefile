@@ -15,3 +15,9 @@ stop:
 clean:
 	@docker container prune -f
 	@docker image prune -f
+
+load:
+	@jmeter -n -t jmeter/test-distributor.jmx -Jloops=1000 -Jusers=10
+
+steadyLoad:
+	jmeter -n -t jmeter/test-distributor-steadyload.jmx -Jthroughput=10000

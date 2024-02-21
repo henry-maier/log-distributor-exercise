@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 public class LogDistributorService {
 
   private final Logger logger = LoggerFactory.getLogger(LogDistributorService.class);
-  private final int MAX_QUEUE_SIZE = 10000;
+  private final int MAX_QUEUE_SIZE = 100000;
 
   private final Queue<LogPacket> queue = new MpscArrayQueue<>(MAX_QUEUE_SIZE);
 
@@ -27,9 +27,9 @@ public class LogDistributorService {
     startProcessingThread();
   }
 
-  public void distributeLog(LogPacket logPacket) {
+  public boolean distributeLog(LogPacket logPacket) {
     // Add the log packet to the queue for processing
-    queue.offer(logPacket);
+    return queue.offer(logPacket);
   }
 
   private void startProcessingThread() {
@@ -49,7 +49,7 @@ public class LogDistributorService {
 
   private void processLogPacket(LogPacket logPacket) {
     // Add your logic here to process the received log packet
-    logger.info("Processing log packet!");
+    logger.debug("Processing log packet!");
 
     LogAnalyzerServiceOuterClass.LogPacket logPacketProto = toProto(logPacket);
     ListenableFuture<LogAnalyzerServiceOuterClass.AnalysisResult> resultListenableFuture =
@@ -59,13 +59,15 @@ public class LogDistributorService {
           try {
             LogAnalyzerServiceOuterClass.AnalysisResult result = resultListenableFuture.get();
             if (result.getSuccess()) {
-              logger.info("Log packet processed successfully. Response: {}", result.getMessage());
+              logger.debug("Log packet processed successfully. Response: {}", result.getMessage());
             } else {
-              logger.info("Log packet processing failed, {}", result.getMessage());
+              logger.warn("Log packet processing failed, {}", result.getMessage());
+              logger.info("RETRYING...");
               waitAndRetry(logPacket);
             }
           } catch (Exception e) {
-            logger.info("Error processing log packet", e);
+            logger.error("Error processing log packet", e);
+            logger.info("RETRYING...");
             waitAndRetry(logPacket);
           }
         },
