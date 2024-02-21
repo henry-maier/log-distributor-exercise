@@ -2,7 +2,6 @@ package com.distributor.distributor.api;
 
 import com.distributor.distributor.core.LogDistributorService;
 import com.distributor.distributor.data.LogPacket;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,8 +16,6 @@ public class DistributeController {
 
   @Autowired private LogDistributorService logDistributorService;
 
-  private static final AtomicInteger processedLogsCount = new AtomicInteger(0);
-
   @GetMapping("/hello")
   public String hello(@RequestParam(value = "name", defaultValue = "World") String name) {
     logger.info("Received request for hello with name: {}", name);
@@ -29,10 +26,6 @@ public class DistributeController {
   public ResponseEntity<String> receiveLog(@RequestBody LogPacket logPacket) {
     // Process the received log packet
     logger.debug("Received log packet of size: {}", logPacket.logMessages().size());
-    int count = processedLogsCount.incrementAndGet();
-    if (count % 1000 == 0) {
-      logger.info("Processed {} log packets", count);
-    }
     if (logDistributorService.distributeLog(logPacket)) {
       return ResponseEntity.status(HttpStatus.OK).body("Log packet received successfully.");
     } else {

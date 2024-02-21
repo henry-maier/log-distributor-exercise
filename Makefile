@@ -17,7 +17,10 @@ clean:
 	@docker image prune -f
 
 load:
-	@jmeter -n -t jmeter/test-distributor.jmx -Jloops=1000 -Jusers=10
+	@jmeter -n -t jmeter/test-distributor.jmx -Jloops=100000 -Jusers=10
 
 steadyLoad:
-	jmeter -n -t jmeter/test-distributor-steadyload.jmx -Jthroughput=10000
+	jmeter -n -t jmeter/test-distributor-steadyload.jmx -Jthroughput=100000
+
+format:
+	./gradlew spotlessApply

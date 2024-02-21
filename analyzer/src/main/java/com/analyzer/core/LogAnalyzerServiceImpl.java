@@ -3,11 +3,13 @@ package com.analyzer.core;
 import distributor.loganalyzer.grpc.LogAnalyzerServiceGrpc;
 import distributor.loganalyzer.grpc.LogAnalyzerServiceOuterClass;
 import io.grpc.stub.StreamObserver;
+import jakarta.annotation.PreDestroy;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @GrpcService
@@ -21,13 +23,13 @@ public class LogAnalyzerServiceImpl extends LogAnalyzerServiceGrpc.LogAnalyzerSe
                            StreamObserver<LogAnalyzerServiceOuterClass.AnalysisResult> responseObserver) {
         int count = processedLogsCount.incrementAndGet();
         if (count % 1000 == 0) {
-            logger.info("Processed {} log packets in total", count);
+            logger.info("Processed {} log packets so far", count);
         }
         // wait for some amount of time
-        int waitTime = r.nextInt(1000);
+        int waitTime = r.nextInt(50);
         logger.debug("Sleeping for {} ms", waitTime);
         try {
-            Thread.sleep(waitTime);
+            TimeUnit.MILLISECONDS.sleep(waitTime);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -38,5 +40,10 @@ public class LogAnalyzerServiceImpl extends LogAnalyzerServiceGrpc.LogAnalyzerSe
                 .build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
+    }
+
+    @PreDestroy
+    public void onShutdown() {
+        logger.info("In total, processed {} log packets", processedLogsCount.get());
     }
 }
