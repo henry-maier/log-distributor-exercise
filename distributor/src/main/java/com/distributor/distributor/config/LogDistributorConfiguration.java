@@ -4,10 +4,7 @@ import com.distributor.distributor.core.LogAnalyzerServiceGetter;
 import distributor.loganalyzer.grpc.LogAnalyzerServiceGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -51,12 +48,12 @@ public class LogDistributorConfiguration {
   @Value("${analyzerWeights}")
   private List<Float> backendServerWeights;
 
-  @Value("${queueSize}")
-  private int MAX_QUEUE_SIZE;
+  @Value("${randomSeed}")
+  private long randomSeed;
 
   @Bean
   public LogAnalyzerServiceGetter logAnalyzerServiceGetter() {
     return new LogAnalyzerServiceGetter(
-        logAnalyzerServiceStubs(), backendServerWeights);
+        logAnalyzerServiceStubs(), backendServerWeights, new Random(randomSeed));
   }
 }

@@ -1,3 +1,6 @@
 analyzerAddresses: ${ANALYZER_ADDRESSES:localhost:9090}
 analyzerWeights: ${ANALYZER_WEIGHTS:1.0}
-queueSize: ${ANALYZER_WEIGHTS:50000}
+randomSeed: ${RANDOM_SEED:42}
+logging:
+  level:
+    com.distributor: INFO

@@ -24,3 +24,9 @@ steadyLoad:
 
 format:
 	./gradlew spotlessApply
+
+run-analyzer:
+	./gradlew analyzer:bootRun
+
+run-distributor:
+	./gradlew distributor:bootRun

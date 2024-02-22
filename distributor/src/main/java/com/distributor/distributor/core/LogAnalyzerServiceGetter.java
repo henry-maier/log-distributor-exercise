@@ -1,25 +1,26 @@
 package com.distributor.distributor.core;
 
 import distributor.loganalyzer.grpc.LogAnalyzerServiceGrpc;
-import distributor.loganalyzer.grpc.LogAnalyzerServiceOuterClass;
-
 import java.util.List;
-
-import static com.distributor.distributor.core.UniqueFloatGenerator.generateUniqueFloat;
+import java.util.Random;
 
 public class LogAnalyzerServiceGetter {
 
   private final LogAnalyzerServiceGrpc.LogAnalyzerServiceFutureStub[] stubs;
   private final float[] cumulativeWeights;
+  private final Random r;
 
   /**
    * Constructor for LogAnalyzerServiceGetter
+   *
    * @param stubs the LogAnalyzerServiceFutureStubs to use
-   * @param weights the weights, in the same order as the stubs, to use to determine how often to use each stub
+   * @param weights the weights, in the same order as the stubs, to use to determine how often to
+   *     use each stub
    */
   public LogAnalyzerServiceGetter(
       List<LogAnalyzerServiceGrpc.LogAnalyzerServiceFutureStub> stubs,
-      List<Float> weights) {
+      List<Float> weights,
+      Random r) {
     this.stubs = stubs.toArray(new LogAnalyzerServiceGrpc.LogAnalyzerServiceFutureStub[0]);
     this.cumulativeWeights = new float[weights.size()];
     float sum = 0;
@@ -27,32 +28,38 @@ public class LogAnalyzerServiceGetter {
       sum += weights.get(i);
       this.cumulativeWeights[i] = sum;
     }
+    this.r = r;
   }
 
   /**
-   * Get a LogAnalyzerServiceFutureStub for a given LogPacket based on this LogAnalyzerServiceGetter's weights
-   * @param logPacket the LogPacket to use to determine which LogAnalyzerServiceFutureStub to return
-   * @return a LogAnalyzerServiceFutureStub
+   * Get the LogAnalyzerServiceFutureStub to use corresponding to position
+   *
+   * @param position the position of the stub to get
+   * @return the LogAnalyzerServiceFutureStub to use, by taking the mod of the position to be a
+   *     valid index
    */
-  public LogAnalyzerServiceGrpc.LogAnalyzerServiceFutureStub getLogAnalyzerServiceStub(LogAnalyzerServiceOuterClass.LogPacket logPacket) {
-    return getLogAnalyzerServiceStub(logPacket, 0);
+  public LogAnalyzerServiceGrpc.LogAnalyzerServiceFutureStub getLogAnalyzerServiceStub(
+      int position) {
+    return stubs[Math.floorMod(position, stubs.length)];
   }
 
   /**
-   * Get a LogAnalyzerServiceFutureStub for a given LogPacket based on this LogAnalyzerServiceGetter's weights, then get
-   * a different LogAnalyzerServiceFutureStub based on the offset
-   * @param logPacket the LogPacket to use to determine which LogAnalyzerServiceFutureStub to return
-   * @param offset the offset to use to get a different LogAnalyzerServiceFutureStub
-   * @return a LogAnalyzerServiceFutureStub
+   * Convenience method to get a LogAnalyzerServiceFutureStub to use based on the weights
+   *
+   * @return the LogAnalyzerServiceFutureStub to use
    */
-  public LogAnalyzerServiceGrpc.LogAnalyzerServiceFutureStub getLogAnalyzerServiceStub(LogAnalyzerServiceOuterClass.LogPacket logPacket, int offset) {
-    float r = generateUniqueFloat(logPacket);
-    for (int i = 0; i < cumulativeWeights.length; i++) {
-      if (r < cumulativeWeights[i]) {
-        return stubs[Math.floorMod(i + offset, stubs.length)];
-      }
-    }
-    // should be unreachable but just in case
-    return stubs[Math.floorMod(stubs.length - 1 + offset, stubs.length)];
+  public LogAnalyzerServiceGrpc.LogAnalyzerServiceFutureStub getLogAnalyzerServiceStub() {
+    return stubs[getWeightedPosition()];
+  }
+
+  /**
+   * Get the position of the stub to use based on the weights
+   *
+   * @return the position of the stub to use
+   */
+  public int getWeightedPosition() {
+    int pos = 0;
+    for (float cmp = r.nextFloat(); pos < stubs.length && cmp > cumulativeWeights[pos]; pos++) {}
+    return Math.floorMod(pos, stubs.length);
   }
 }
