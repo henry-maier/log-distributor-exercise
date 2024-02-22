@@ -51,12 +51,12 @@ public class LogDistributorConfiguration {
   @Value("${analyzerWeights}")
   private List<Float> backendServerWeights;
 
-  @Value("${randomSeed}")
-  private long randomSeed;
+  @Value("${queueSize}")
+  private int MAX_QUEUE_SIZE;
 
   @Bean
   public LogAnalyzerServiceGetter logAnalyzerServiceGetter() {
     return new LogAnalyzerServiceGetter(
-        logAnalyzerServiceStubs(), backendServerWeights, new Random(randomSeed));
+        logAnalyzerServiceStubs(), backendServerWeights);
   }
 }

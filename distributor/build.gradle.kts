@@ -28,6 +28,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     implementation("org.jctools:jctools-core:4.0.3")
     implementation("net.devh:grpc-client-spring-boot-starter:2.15.0.RELEASE")
+    implementation("commons-codec:commons-codec:1.15")
     implementation(project(":grpc-lib"))
 }
 

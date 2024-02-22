@@ -18,6 +18,7 @@ import org.jctools.queues.MpscArrayQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -31,22 +32,34 @@ public class LogDistributorService {
   private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
   private final Logger logger = LoggerFactory.getLogger(LogDistributorService.class);
-  private final int MAX_QUEUE_SIZE = 10000;
+  @Value("${queueSize}")
+  private int MAX_QUEUE_SIZE;
 
   private final Queue<LogPacket> queue = new MpscArrayQueue<>(MAX_QUEUE_SIZE);
 
   @Autowired private LogAnalyzerServiceGetter logAnalyzerServiceGetter;
 
+  /**
+   * Default constructor for LogDistributorService. Starts the processing thread upon instantiation.
+   */
   public LogDistributorService() {
     // Start the processing thread upon instantiation
     startProcessingThread();
   }
 
+  /**
+   * Distributes the log packet to the processing thread.
+   * @param logPacket The log packet to be distributed.
+   * @return true if the log packet was successfully distributed, false otherwise.
+   */
   public boolean distributeLog(LogPacket logPacket) {
     // Add the log packet to the queue for processing
     return queue.offer(logPacket);
   }
 
+  /**
+   * Shuts down the LogDistributorService gracefully.
+   */
   @PreDestroy
   public void onShutdown() {
     logger.info("Requesting log executor to shutdown...");
@@ -93,14 +106,15 @@ public class LogDistributorService {
 
   private void processLogPacket(LogPacket logPacket) {
     // Add your logic here to process the received log packet
+    LogAnalyzerServiceOuterClass.LogPacket logPacketProto = toProto(logPacket);
     callAnalyzeLog(
-        toProto(logPacket), logAnalyzerServiceGetter.getLogAnalyzerServiceStub(), INITIAL_DELAY_MS);
+        logPacketProto, logAnalyzerServiceGetter.getLogAnalyzerServiceStub(logPacketProto), 0);
   }
 
   private void callAnalyzeLog(
       LogAnalyzerServiceOuterClass.LogPacket logPacketProto,
       LogAnalyzerServiceGrpc.LogAnalyzerServiceFutureStub stub,
-      long backoffMs) {
+      int retries) {
     ListenableFuture<LogAnalyzerServiceOuterClass.AnalysisResult> res =
         stub.analyzeLog(logPacketProto);
     Futures.addCallback(
@@ -116,18 +130,22 @@ public class LogDistributorService {
             logger.error("Error processing log packet", t);
             logger.info("RETRYING...");
             try {
-              Thread.sleep(backoffMs);
+              Thread.sleep(getMillis(retries));
             } catch (InterruptedException e) {
               logger.error("Thread interrupted while waiting to retry");
               throw new RuntimeException(e);
             }
             callAnalyzeLog(
                 logPacketProto,
-                logAnalyzerServiceGetter.getLogAnalyzerServiceStub(),
-                Math.min(backoffMs * BACKOFF_MULTIPLIER, MAX_DELAY_MS));
+                logAnalyzerServiceGetter.getLogAnalyzerServiceStub(logPacketProto, retries + 1),
+                retries + 1);
           }
         },
         MoreExecutors.directExecutor());
+  }
+
+  private long getMillis(int retries) {
+    return (long) Math.min(Math.pow(BACKOFF_MULTIPLIER, retries) * INITIAL_DELAY_MS, MAX_DELAY_MS);
   }
 
   private LogAnalyzerServiceOuterClass.LogPacket toProto(LogPacket logPacket) {

@@ -1,3 +1,3 @@
 analyzerAddresses: ${ANALYZER_ADDRESSES:localhost:9090}
 analyzerWeights: ${ANALYZER_WEIGHTS:1.0}
-randomSeed: 42
+queueSize: ${ANALYZER_WEIGHTS:50000}
